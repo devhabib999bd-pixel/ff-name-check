@@ -1,0 +1,93 @@
+{% extends "base.html" %}{% block title %}Developer Docs{% endblock %}
+{% block body %}
+<h1>Developer Documentation</h1>
+<p class="sub">Verify a Free Fire player UID from your website or app and get the nickname and region.</p>
+
+<div class="card"><h2>Quick start</h2>
+<ol class="steps">
+<li>Ask the admin for an <b>API key</b> (looks like <code>ffk_...</code>).</li>
+<li>Call the endpoint from your <b>server</b> (PHP, Node, Python). Never put the key in browser JavaScript or an Android app.</li>
+<li>Check <code>status</code> in the JSON and act on it (table below).</li>
+</ol>
+<pre><code>curl "{{ base }}/api/v1/check?uid=8412833300" -H "X-API-Key: YOUR_KEY"</code></pre></div>
+
+<div class="card"><h2>Endpoints</h2>
+<table>
+<tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+<tr><td>GET / POST</td><td class="mono">/api/v1/check</td><td>Verify a UID. Parameter <code>uid</code> (query, form or JSON body).</td></tr>
+<tr><td>GET</td><td class="mono">/api/v1/health</td><td>Service status. No key needed.</td></tr>
+</table>
+<h3>Authentication</h3>
+<p>Send the key in the <code>X-API-Key</code> header (preferred) or as <code>?key=</code>. Keys are limited per minute; the admin sets the limit per key.</p>
+<h3>Parameters</h3>
+<p><code>uid</code>: numeric Free Fire player ID, 5 to 15 digits.</p></div>
+
+<div class="card"><h2>Response</h2>
+<pre><code>{
+  "ok": true,
+  "status": "success",
+  "data": {
+    "nickname": "PlayerName",
+    "region": "BD",
+    "open_id": "dc7900db52e712c4470786d6132c5b85",
+    "img_url": "https://cdn-gop.garenanow.com/..."
+  },
+  "cached": false,
+  "message": ""
+}</code></pre>
+<h3>status values</h3>
+<table>
+<tr><th>status</th><th>HTTP</th><th>Meaning</th><th>What your app should do</th></tr>
+<tr><td><code>success</code></td><td>200</td><td>Player exists. <code>data</code> is filled.</td><td>Accept. Show nickname, optionally save it.</td></tr>
+<tr><td><code>invalid_id</code></td><td>200</td><td>No player with this UID.</td><td>Ask the user to re-enter the UID.</td></tr>
+<tr><td><code>unverified</code></td><td>200</td><td>Checker is down; admin enabled fallback. <code>data</code> is null.</td><td>Accept the UID but mark it "unverified" for manual review.</td></tr>
+<tr><td><code>unavailable</code></td><td>503</td><td>Checker is down and fallback is off.</td><td>Show "try again later" or queue the request.</td></tr>
+<tr><td><code>rate_limited</code></td><td>429</td><td>Too many requests for this key.</td><td>Wait (see <code>Retry-After</code> header), then retry.</td></tr>
+<tr><td><code>bad_request</code></td><td>400</td><td>UID is not 5 to 15 digits.</td><td>Validate input before calling.</td></tr>
+<tr><td><code>unauthorized</code></td><td>401</td><td>Key missing, wrong or disabled.</td><td>Contact the admin.</td></tr>
+</table></div>
+
+<div class="card"><h2>Code examples</h2>
+<h3>PHP</h3>
+<pre><code>function ff_check($uid) {
+    $ch = curl_init("{{ base }}/api/v1/check?uid=" . urlencode($uid));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => ["X-API-Key: YOUR_KEY"],
+        CURLOPT_TIMEOUT => 20,
+    ]);
+    $body = curl_exec($ch);
+    curl_close($ch);
+    return json_decode($body, true) ?: ["status" => "unavailable"];
+}
+
+$r = ff_check($_POST['uid']);
+switch ($r['status']) {
+    case 'success':     $name = $r['data']['nickname']; /* save user */ break;
+    case 'invalid_id':  /* tell user the UID is wrong */ break;
+    case 'unverified':  /* accept, flag for manual review */ break;
+    default:            /* unavailable / rate_limited: try later */ break;
+}</code></pre>
+<h3>Node.js</h3>
+<pre><code>const res = await fetch("{{ base }}/api/v1/check?uid=" + uid, {
+  headers: { "X-API-Key": process.env.FF_KEY },
+});
+const r = await res.json();
+if (r.status === "success") console.log(r.data.nickname);</code></pre>
+<h3>Python</h3>
+<pre><code>import requests
+r = requests.get("{{ base }}/api/v1/check", params={"uid": uid},
+                 headers={"X-API-Key": KEY}, timeout=20).json()
+print(r["status"], r.get("data"))</code></pre>
+<h3>Android (Kotlin, OkHttp), call your own backend, not this API directly</h3>
+<p>Your app calls your PHP/Laravel server, and your server calls this API with the key. Putting the key inside an APK lets anyone extract it.</p></div>
+
+<div class="card"><h2>Best practices</h2>
+<ul>
+<li><b>Verify once, store the result.</b> Check the UID at registration or tournament join, then keep the nickname in your database. Do not call on every page load.</li>
+<li><b>Results are cached</b> for a few minutes by the panel, so repeating the same UID is cheap.</li>
+<li><b>Always handle <code>unverified</code> and <code>unavailable</code>.</b> The source is an unofficial endpoint protected by bot checks and can pause without warning while the admin refreshes the cookie.</li>
+<li><b>Do not run bulk loops.</b> Sending thousands of UIDs at once will get the shared cookie blocked for every site using this service.</li>
+<li>Set a timeout of about 20 seconds on your side.</li>
+</ul></div>
+{% endblock %}

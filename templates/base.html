@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}FF CheckID{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body>
+<div class="top"><div class="in">
+  <a class="brand" href="/">FF <b>CheckID</b></a>
+  <nav>
+  {% set ep = request.endpoint %}
+  {% if session.admin %}
+    <a href="{{ url_for('dashboard') }}" class="{{ 'on' if ep=='dashboard' }}">Dashboard</a>
+    <a href="{{ url_for('tester') }}" class="{{ 'on' if ep=='tester' }}">Tester</a>
+    <a href="{{ url_for('settings') }}" class="{{ 'on' if ep=='settings' }}">Settings</a>
+    <a href="{{ url_for('keys') }}" class="{{ 'on' if ep=='keys' }}">API Keys</a>
+    <a href="{{ url_for('logs') }}" class="{{ 'on' if ep=='logs' }}">Logs</a>
+    <a href="{{ url_for('setup') }}" class="{{ 'on' if ep=='setup' }}">Setup</a>
+  {% endif %}
+    <a href="{{ url_for('docs') }}" class="{{ 'on' if ep=='docs' }}">Developer Docs</a>
+  </nav>
+  <span class="sp"></span>
+  {% if session.admin %}<a href="{{ url_for('account') }}" style="margin-right:12px">{{ session.admin }}</a><a href="{{ url_for('logout') }}">Logout</a>
+  {% else %}<a href="{{ url_for('login') }}">Admin login</a>{% endif %}
+</div></div>
+<div class="wrap">
+{% with m = get_flashed_messages(with_categories=true) %}{% for c, t in m %}<div class="flash {{ c }}">{{ t }}</div>{% endfor %}{% endwith %}
+{% block body %}{% endblock %}
+</div></body></html>

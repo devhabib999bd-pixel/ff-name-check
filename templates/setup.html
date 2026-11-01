@@ -1,0 +1,79 @@
+{% extends "base.html" %}{% block title %}Setup guide{% endblock %}
+{% block body %}
+<h1>Setup guide</h1><p class="sub">Install, deploy, and keep the cookie fresh.</p>
+
+<div class="card"><h2>A. Get a fresh cookie (do this whenever the dashboard says "Expired")</h2>
+<ol class="steps">
+<li>In <b>Chrome on a PC</b>, open <code>shop.garena.my</code>, choose Free Fire. If you are logged in, press <b>Logout</b> first.</li>
+<li>Press <b>F12</b> → <b>Network</b> tab → tick <b>Keep log</b> → type <code>player_id_login</code> in the filter.</li>
+<li>Enter a Player ID and press Login. Solve the captcha if it appears.</li>
+<li>Click the <code>player_id_login</code> row → <b>Headers</b> → scroll to <b>Request Headers</b>.</li>
+<li>Right-click the <code>cookie</code> value → <b>Copy value</b>. Do the same for <code>user-agent</code>.</li>
+<li>Paste into <a href="{{ url_for('settings') }}">Settings</a> (cookie box and User-Agent box), save, then run one UID in the <a href="{{ url_for('tester') }}">Tester</a>.</li>
+</ol>
+<p class="hint">Shortcut: if only the cookie expired and the browser is the same, paste just the <code>datadome</code> value into "Quick update".</p></div>
+
+<div class="card"><h2>B. Run on Windows (testing)</h2>
+<ol class="steps">
+<li>Install Python 3.12 (tick "Add python.exe to PATH").</li>
+<li>Extract the project folder, copy <code>.env.example</code> to <code>.env</code>, and set <code>ADMIN_USER</code> and <code>ADMIN_PASS</code>.</li>
+<li>Double-click <code>run_windows.bat</code> and open <code>http://127.0.0.1:5000/admin</code>.</li>
+</ol></div>
+
+<div class="card"><h2>C. Deploy on a VPS (CyberPanel / OpenLiteSpeed)</h2>
+<ol class="steps">
+<li>In CyberPanel create a website for a subdomain such as <code>ffapi.yourdomain.com</code> and issue SSL.</li>
+<li>Upload and extract the project to <code>/opt/ffpanel</code>, then run:
+<pre><code>cd /opt/ffpanel
+python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
+cp .env.example .env && nano .env      # set ADMIN_USER / ADMIN_PASS
+cp ffpanel.service /etc/systemd/system/
+systemctl daemon-reload && systemctl enable --now ffpanel</code></pre></li>
+<li>CyberPanel → Websites → your site → <b>vHost Conf</b>, paste, save, restart OpenLiteSpeed:
+<pre><code>extprocessor ffpanel {
+  type                    proxy
+  address                 127.0.0.1:5000
+  maxConns                100
+  initTimeout             60
+  retryTimeout            0
+  respBuffer              0
+}
+context / {
+  type                    proxy
+  handler                 ffpanel
+  addDefaultCharset       off
+}</code></pre></li>
+<li>Open <code>https://ffapi.yourdomain.com/admin</code>, sign in, <b>change the password</b>, then add the cookie.</li>
+</ol>
+<div class="flash warn" style="margin-top:12px">The datadome cookie is tied to the network and browser it came from. If the VPS gets captchas while your PC works, the cookie must come from a browser on the same IP as the server, or the server needs a proxy that matches the browser.</div></div>
+
+<div class="card"><h2>D. Connect your websites</h2>
+<ol class="steps">
+<li><a href="{{ url_for('keys') }}">API Keys</a> → create one key per site (for example "Game Sports BD").</li>
+<li>Give the site's developer the key and the <a href="{{ url_for('docs') }}">Developer Docs</a> link. The base URL is <code>{{ base }}</code>.</li>
+<li>Watch usage in <a href="{{ url_for('logs') }}">Logs</a>. Disable a key instantly if it is abused.</li>
+</ol></div>
+
+<div class="card"><h2>E. What happens when Garena blocks the cookie</h2>
+<ul>
+<li>After the configured number of captchas in a row the panel marks the cookie <b>Expired</b>, pauses calls to Garena for the cooldown period, and sends a Telegram alert (if set up).</li>
+<li>With fallback <b>off</b>, your sites receive <code>unavailable</code>. With fallback <b>allow</b>, they receive <code>unverified</code> and can keep taking registrations.</li>
+<li>You paste a fresh cookie (section A). The pause is cleared automatically on save.</li>
+</ul>
+<h3>Troubleshooting</h3>
+<table>
+<tr><th>Symptom</th><th>Fix</th></tr>
+<tr><td>Tester shows <code>unavailable</code> immediately</td><td>Cookie empty or expired. Redo section A, check the User-Agent matches.</td></tr>
+<tr><td>Works on PC, captcha on VPS</td><td>IP mismatch. See the yellow note in section C.</td></tr>
+<tr><td>502 Bad Gateway on the site</td><td><code>systemctl status ffpanel</code> and <code>journalctl -u ffpanel -n 50</code>.</td></tr>
+<tr><td>Forgot admin password</td><td>Delete <code>data/panel.db</code> only if you accept losing keys and settings, or ask for a reset script.</td></tr>
+</table></div>
+
+<div class="card"><h2>F. Security checklist</h2>
+<ul>
+<li>Change the default admin password on first login.</li>
+<li>Serve over HTTPS only. The panel stores your Garena cookie in <code>data/panel.db</code>; restrict that file (<code>chmod 600</code>) and back it up.</li>
+<li>Never commit <code>.env</code> or <code>data/</code> to Git.</li>
+<li>Use a separate API key per website and keep rate limits low.</li>
+</ul></div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% block title %}Settings{% endblock %}
+{% block body %}
+<h1>Settings</h1><p class="sub">Change the cookie here whenever Garena blocks it. No server restart needed.</p>
+
+<div class="card"><h2>1. Cookie &amp; browser identity</h2>
+  <p class="hint">Status: {% if s.cookie_status=='ok' %}<span class="badge b-ok">Working</span>{% elif s.cookie_status=='expired' %}<span class="badge b-err">Expired / blocked</span>{% else %}<span class="badge b-gray">Unknown</span>{% endif %}
+  · Changed {{ s.cookie_updated|dt }}</p>
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="cookie">
+    <label>Quick update: datadome value only</label>
+    <input type="text" name="datadome" placeholder="Paste only the datadome value (the long code)" autocomplete="off">
+    <p class="hint">Fastest fix when the cookie expires: copy just the <code>datadome</code> value from your browser and paste here.</p>
+    <label>Or replace the full Cookie header</label>
+    <textarea name="cookie" placeholder="region=MY; language=en; ...; datadome=..."></textarea>
+    <p class="hint">Leave empty to keep the current one. Currently saved (masked): <span class="mono">{{ masked or 'none' }}</span></p>
+    <label>User-Agent</label><input type="text" name="user_agent" value="{{ s.user_agent }}">
+    <p class="hint">Must be the exact User-Agent of the browser you copied the cookie from.</p>
+    <label>Proxy URL (optional)</label><input type="text" name="proxy_url" value="{{ s.proxy_url }}" placeholder="http://user:pass@host:port">
+    <p class="hint">Use only if the cookie was taken from the same network as that proxy.</p>
+    <p><button class="btn">Save cookie settings</button> <a class="btn sec" href="{{ url_for('tester') }}">Open tester</a></p>
+  </form></div>
+
+<div class="card"><h2>2. When Garena blocks the cookie</h2>
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="behavior">
+    <div class="grid g2">
+      <div><label>Captchas in a row before pausing</label><input type="number" name="captcha_threshold" value="{{ s.captcha_threshold }}" min="1" max="20">
+        <p class="hint">After this many, the panel stops calling Garena so the block does not get worse.</p></div>
+      <div><label>Pause length (minutes)</label><input type="number" name="cooldown_minutes" value="{{ s.cooldown_minutes }}" min="1" max="1440"></div>
+      <div><label>Cache results for (seconds)</label><input type="number" name="cache_ttl" value="{{ s.cache_ttl }}" min="0" max="86400">
+        <p class="hint">Same UID asked again within this time never touches Garena. 0 = off.</p></div>
+      <div><label>Request timeout (seconds)</label><input type="number" name="timeout" value="{{ s.timeout }}" min="3" max="60"></div>
+    </div>
+    <label>If verification is unavailable</label>
+    <select name="fallback_mode">
+      <option value="off" {{ 'selected' if s.fallback_mode=='off' }}>Return an error (503), strict</option>
+      <option value="allow" {{ 'selected' if s.fallback_mode=='allow' }}>Return "unverified" (200): your site keeps working, verify manually</option>
+    </select>
+    <p class="hint">"Unverified" lets registrations continue while the cookie is dead. Your site must handle <code>status: "unverified"</code> (see Developer Docs).</p>
+    <p><button class="btn">Save</button></p></form></div>
+
+<div class="card"><h2>3. Telegram alert</h2><p class="hint">Get a message the moment the cookie dies so you can replace it quickly. Create a bot with @BotFather, send it a message, then paste the token and your chat id.</p>
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="telegram">
+    <div class="grid g2"><div><label>Bot token</label><input type="text" name="telegram_token" value="{{ s.telegram_token }}" autocomplete="off"></div>
+    <div><label>Chat id</label><input type="text" name="telegram_chat" value="{{ s.telegram_chat }}"></div></div>
+    <p><button class="btn">Save</button></p></form>
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="telegram_test"><button class="btn sec sm">Send test message</button></form></div>
+
+<div class="card"><h2>4. Advanced</h2>
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="advanced">
+    <div class="grid g2"><div><label>Upstream endpoint</label><input type="text" name="api_url" value="{{ s.api_url }}"></div>
+    <div><label>App ID</label><input type="text" name="app_id" value="{{ s.app_id }}"><p class="hint">100067 = Free Fire</p></div></div>
+    <p><button class="btn sec">Save advanced</button></p></form></div>
+{% endblock %}

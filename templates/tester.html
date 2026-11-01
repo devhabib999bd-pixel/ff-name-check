@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block title %}Tester{% endblock %}
+{% block body %}
+<h1>Tester</h1><p class="sub">Run a real lookup using your saved cookie. Results are cached and logged like normal requests.</p>
+<div class="card"><form method="post" class="row"><input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="text" name="uid" value="{{ uid }}" placeholder="Player UID e.g. 8412833300" style="max-width:320px" required>
+  <button class="btn">Check UID</button></form></div>
+{% if result %}
+<div class="card"><h2>Result
+  {% if result.status=='success' %}<span class="badge b-ok">success</span>{% elif result.status=='invalid_id' %}<span class="badge b-warn">invalid id</span>{% else %}<span class="badge b-err">{{ result.status }}</span>{% endif %}
+  <span class="hint">{{ result._ms }} ms{% if result.cached %} · from cache{% endif %}</span></h2>
+  {% if result.data %}<div class="row">{% if result.data.img_url %}<img src="{{ result.data.img_url }}" width="56" height="56" style="border-radius:10px;border:1px solid var(--line)" alt="">{% endif %}
+    <div><div style="font-size:18px;font-weight:700">{{ result.data.nickname }}</div><div class="hint">Region {{ result.data.region }}</div></div></div>{% endif %}
+  {% if result.message %}<p>{{ result.message }}</p>{% endif %}
+  {% if result.status=='unavailable' %}<p class="hint">Cookie is probably expired. Go to <a href="{{ url_for('settings') }}">Settings</a> and paste a fresh one.</p>{% endif %}
+  <pre><code>{{ result|tojson(indent=2) }}</code></pre></div>
+{% endif %}
+{% endblock %}

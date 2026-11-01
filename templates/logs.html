@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block title %}Logs{% endblock %}
+{% block body %}
+<h1>Request logs</h1><p class="sub">Latest 150 requests.</p>
+<div class="card"><div class="row">
+  <a class="btn sm {{ '' if not st else 'sec' }}" href="{{ url_for('logs') }}">All</a>
+  {% for x in ['success','invalid_id','unavailable','unverified','rate_limited','bad_request'] %}<a class="btn sm {{ '' if st==x else 'sec' }}" href="{{ url_for('logs', status=x) }}">{{ x }}</a>{% endfor %}
+  <span style="flex:1"></span>
+  <form method="post" onsubmit="return confirm('Clear all logs?')"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="clear"><button class="btn sm sec">Clear logs</button></form></div></div>
+<div class="card" style="overflow-x:auto"><table>
+  <tr><th>Time</th><th>UID</th><th>Result</th><th>Key</th><th>IP</th><th>ms</th><th>Cache</th></tr>
+  {% for r in rows %}<tr><td>{{ r.ts|dt }}</td><td class="mono">{{ r.uid }}</td>
+    <td>{% if r.status=='success' %}<span class="badge b-ok">success</span>{% elif r.status in ('invalid_id','unverified') %}<span class="badge b-warn">{{ r.status }}</span>{% else %}<span class="badge b-err">{{ r.status }}</span>{% endif %}</td>
+    <td>{{ r.key_name }}</td><td class="mono">{{ r.ip }}</td><td>{{ r.ms }}</td><td>{{ 'yes' if r.cached else '' }}</td></tr>
+  {% else %}<tr><td colspan="7" class="hint">Nothing here yet.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

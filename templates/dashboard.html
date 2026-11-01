@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% block title %}Dashboard{% endblock %}
+{% block body %}
+<h1>Dashboard</h1><p class="sub">Live status of your Free Fire ID checker</p>
+{% if s.default_pw == '1' %}<div class="flash err">You are still using the default admin password. <a href="{{ url_for('account') }}">Change it now</a>.</div>{% endif %}
+{% if not s.cookie %}<div class="flash warn">No cookie saved yet. <a href="{{ url_for('settings') }}">Add your datadome cookie</a> to start verifying UIDs.</div>{% endif %}
+{% if cooldown_left %}<div class="flash warn">Cooling down after repeated captchas. Garena is not being called for {{ (cooldown_left // 60) + 1 }} more minute(s).
+  <form class="inline" method="post" action="{{ url_for('reset_cooldown') }}"><input type="hidden" name="csrf" value="{{ csrf_token() }}"> <button class="btn sm sec">Clear cooldown</button></form></div>{% endif %}
+
+<div class="grid g4">
+  <div class="card stat"><div class="l">Cookie status</div>
+    <div class="n">{% if s.cookie_status=='ok' %}<span class="badge b-ok">Working</span>{% elif s.cookie_status=='expired' %}<span class="badge b-err">Expired / blocked</span>{% else %}<span class="badge b-gray">Unknown</span>{% endif %}</div>
+    <div class="hint">Last success: {{ s.last_ok|ago }}</div></div>
+  <div class="card stat"><div class="l">Requests (24h)</div><div class="n">{{ total }}</div><div class="hint">{{ cached }} served from cache</div></div>
+  <div class="card stat"><div class="l">Avg response</div><div class="n">{{ avg }} ms</div><div class="hint">across last 24h</div></div>
+  <div class="card stat"><div class="l">Active API keys</div><div class="n">{{ keys }}</div><div class="hint"><a href="{{ url_for('keys') }}">Manage keys</a></div></div>
+</div>
+
+<div class="grid g2">
+  <div class="card"><h2>Requests, last 7 days</h2>
+    <div class="bars">{% for d, n in days %}<div>{{ n }}<i style="height:{{ (n / peak * 80)|round|int }}px"></i>{{ d }}</div>{% endfor %}</div></div>
+  <div class="card"><h2>Results (24h)</h2>
+    <table>{% for k, v in by.items() %}<tr><td>{{ k }}</td><td style="text-align:right"><b>{{ v }}</b></td></tr>{% else %}<tr><td class="hint">No requests yet.</td></tr>{% endfor %}</table>
+    <p class="hint">Cookie last changed: {{ s.cookie_updated|dt }} · Last captcha: {{ s.last_captcha|ago }}</p></div>
+</div>
+{% endblock %}
